@@ -8,11 +8,12 @@ LIBINC := lib
 # ASIOINC := /home/viliam/sources/asio-1.18.1/include/
 # JSONINC := /home/viliam/sources/json/include/
 # CCFITSINC := /usr/local/include/CCfits/
-ASTROMETRYINC := /usr/local/astrometry/include/
+#ASTROMETRYINC := /usr/local/astrometry/include/
+ASTROMETRYINC := /home/viliam/astrometry/include
 
 LDFLAGS := -lpthread -lcfitsio -ldl
 
-LIBRARIES := -L/usr/local/astrometry/lib/ -lanutils -lanbase -lanfiles -lqfits -lcatalogs -lgsl -lgslcblas -lm
+LIBRARIES := -L/usr/local/astrometry/lib/ -lm
 EXECUTABLE  := cntrdTest
 EXECUTABLE_DEBUG  := cntrdTest_debug
 
