@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <chrono>
 
 extern "C"{
 #include <fitsio.h>
@@ -104,36 +105,56 @@ int main(int argc, char **argv){
     outfile.open("cppCntrd.dat", std::ios::out | std::ios::trunc );
 
     //==============================================//
-    // loop over all images in 3D fits file
+    // outer loop to help with timing precision
     //==============================================//
-    for(int ii = 0; ii < naxisn[2]; ii++){
-        
-        fpixel[2] = ii+1;
-        fits_read_pix(fptr, TFLOAT, &fpixel[0], naxisn[0]*naxisn[1], NULL, &image[0], NULL, &status);
-        
+    int loopCount = 1000;
+    std::vector<std::chrono::high_resolution_clock::time_point> loopTimes(loopCount);
+
+    for(int jj=0; jj<loopCount; jj++)
+    {
+        fileLine.str("");
+
+        loopTimes[jj] = std::chrono::high_resolution_clock::now();
+
         //==============================================//
-        // vector to 2d vector
+        // loop over all images in 3D fits file
         //==============================================//
-        std::vector< std::vector<float>> imageArray;
-        imageArray.resize(subframeWidth, std::vector<float>(subframeWidth, 0));
-        for(unsigned int ii=0; ii < image.size(); ii++){
-            imageArray[ii/subframeWidth][ii % subframeWidth] = image[ii];
+        for(int ii = 0; ii < naxisn[2]; ii++){
+            
+            fpixel[2] = ii+1;
+            fits_read_pix(fptr, TFLOAT, &fpixel[0], naxisn[0]*naxisn[1], NULL, &image[0], NULL, &status);
+            
+            //==============================================//
+            // vector to 2d vector
+            //==============================================//
+            std::vector< std::vector<float>> imageArray;
+            imageArray.resize(subframeWidth, std::vector<float>(subframeWidth, 0));
+            for(unsigned int ii=0; ii < image.size(); ii++){
+                imageArray[ii/subframeWidth][ii % subframeWidth] = image[ii];
+            }
+
+            //==============================================//
+            // Try cntrd code
+            //==============================================//
+            double xc = 0;
+            double yc = 0;
+            cntrd(imageArray, (int) subframeWidth/2, &xc, &yc);
+
+            // std::cout << "XC: " << xc << "\tYC: " << yc << "\n";
+            fileLine << xc << ", " << yc << "\n";
         }
-
-        //==============================================//
-        // Try cntrd code
-        //==============================================//
-        double xc = 0;
-        double yc = 0;
-        cntrd(imageArray, (int) subframeWidth/2, &xc, &yc);
-
-        // std::cout << "XC: " << xc << "\tYC: " << yc << "\n";
-        fileLine << xc << ", " << yc << "\n";
     }
     outfile << fileLine.str();
     
+    std::ofstream timeFile;
+    timeFile.open("cppCntrdTiming.dat", std::ios::out);
+    fileLine.str("");
+    for(auto tt : loopTimes) fileLine << std::chrono::duration_cast<std::chrono::nanoseconds>(tt.time_since_epoch()).count() << "\n";
+    timeFile << fileLine.str();
     // std::cout << "Done" << std::endl;
+
     outfile.close();
+    timeFile.close();
     fits_close_file(fptr, &status);
     return 0;
 }
